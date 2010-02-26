@@ -2,7 +2,8 @@
 This is a very simplistic events callback library in Ruby. Simplistic in the
 fact that it does no threading or any sort of process management; it's meant
 more for very simple projects that can benefit from an event observation
-model.  I've mostly used it in an IRC that's in the process of being written.
+model.  I've mostly used it in an IRC bot that's in the process of being 
+written.
 
 This is a stand-alone lib, with no requirements.  Full docs are in docs/
 of course.
