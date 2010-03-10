@@ -19,14 +19,14 @@ Here's a simple example:
   has_event?(:laugh)
     => true
 
-  observe_event(:laugh) do |event, args|
+  hid1 = observe_event(:laugh) do |event, args|
     puts "%s is laughing!" % who.first()
   end
 
   emit_event(:laugh, "Syntruth")
     => Syntruth is laughing!
 
-  observe_event(:laugh) do |event, args|
+  hid2 = observe_event(:laugh) do |event, args|
     puts "Somebody is laughing!"
   end
 
@@ -41,4 +41,18 @@ Here's a simple example:
 
   unsilence_event(:laugh)
 
+  silence_event(:laugh) do
+    # This will also produce no output.
+    emit_event(:laugh, "Syntruth")
+  end
+
+  unobserve_event(:laugh, hid2)
+
+  emit_event(:laugh, "Syntruth")
+    => "Syntruth is laughing!"
+
+  unobserve_event(:laugh, hid1)
+
+  emit_event(:laugh, "Syntruth")
+    => ...nobody is laughing now.
 

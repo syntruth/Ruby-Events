@@ -75,6 +75,9 @@ module Kernel
   # +create_event_if_needed+:: If the event doesn't exist in the events 
   #   has yet, create it.
   # +block+:: The anonymous block to be called when the event happens.
+  #
+  # The ID of the block is returned, which needs to be used to remove
+  # an observer.
   def observe_event(event, create_event_if_needed=false, &block)
     event = event.to_s.to_sym()
 
@@ -87,6 +90,24 @@ module Kernel
     end
 
     @@events[event].push(block)
+
+    return block.object_id
+  end
+
+  # This will remove an event handler from an observed event.
+  # +event+:: The event to remove the handler from.
+  # +handler_id+:: This is the handler id of the block that was
+  #   returned from observe_event() -- if you didn't save the value
+  #   you won't be able to remove the observer!
+  def unobserve_event(event, handler_id)
+    event = event.to_s.to_sym()
+
+    if @@events.has_key?(event)
+      @@events.delete_if do |handler| 
+        handler.object_id == handler_id
+      end
+    end
+
     return event
   end
 
@@ -129,9 +150,17 @@ module Kernel
 
   # This will cause an event's callbacks to _not_ be called when the 
   # event is emitted.
+  # If called with a block, then the event will be silenced until
+  # the block is finished.
   def silence_event(event)
     event = event.to_s.to_sym()
     @@silenced_events.push(event) unless @@silenced_events.include?(event)
+
+    if block_given?
+      yield
+      unsilence_event(event)
+    end
+
     return event
   end
 
