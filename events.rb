@@ -5,6 +5,12 @@
 #
 # This has -no- threading or process management!
 #
+# Three events are pre-defined:
+#
+#  :event_created  -- when a new event is created.
+#  :event_emitted  -- when a event is emitted, but only if it
+#                     is _NOT_ :event_emitted.
+#  :event_removed  -- when a event is removed.
 #
 # Author:: Randy Carnahan
 # Copyright:: Copyright (c) 2009 Randy Carnahan
@@ -14,7 +20,15 @@ module Kernel
 
   # Our events hash. Each key will reference an array of +Proc+
   # objects that are the event callbacks.
-  @@events = {}
+  @@events = {
+    :event_created => [],
+    :event_emitted => [],
+    :event_removed => []
+  }
+
+  # Holds our silenced events. Events in this array are not emitted
+  # if they have been silencted.
+  @@silenced_events = []
 
   # EventError Exception to handle all event related errors.
   class EventError < StandardError
@@ -23,37 +37,32 @@ module Kernel
   # Adds the event to the events hash.
   # +event+ must be a Symbol or a String, or else an EventError
   # is raised.
+  # The :event_created event is emitted after creation.
   def create_event(event)
-    unless event.is_a?(Symbol) or event.is_a?(String)
-      raise EventError, "Event Name must be a string or a symbol!"
-    end
-    event = event.to_sym() if event.is_a?(String)
+    event = event.to_s.to_sym()
     @@events[event] = [] if not @@events.has_key?(event)
-    return
+    emit_event(:event_created, event)
+    return event
   end
 
-  # Removes +event+ from the events hash. Note, all callbacks are
-  # removed as well; callbacks are not notified of this!
-  # Though, you might add a +:event_removed+ event and then emit
-  # that event after you remove an event. :D
+  # Removes +event+ from the events hash.
+  # The :event_removed event is emitted if the removal was
+  # successful.
   def remove_event(event)
-    unless event.is_a?(Symbol) or event.is_a?(String)
-      raise EventError, "Event Name must be a string or a symbol!"
-    end
-    event = event.to_sym() if event.is_a?(String)
+    event = event.to_s.to_sym()
+
     if @@events.has_key?(event)
-      return @@events.delete(event)
+      @@events.delete(event)
+      emit_event(:event_removed, event)
     end
-    return
+
+    return event
   end
 
   # Checks for a specific event, and returns true if it exists as
   # a key in the events hash.
   def has_event?(event)
-    unless event.is_a?(Symbol) or event.is_a?(String)
-      raise EventError, "Event Name must be a string or a symbol!"
-    end
-    event = event.to_sym() if event.is_a?(String)
+    event = event.to_s.to_sym()
     return @@events.has_key?(event)
   end
 
@@ -63,7 +72,8 @@ module Kernel
   #   has yet, create it.
   # +block+:: The anonymous block to be called when the event happens.
   def observe_event(event, create_event_if_needed=false, &block)
-    event = event.to_sym() if event.is_a?(String)
+    event = event.to_s.to_sym()
+
     if not has_event?(event)
       if create_event_if_needed
         create_event(event)
@@ -71,16 +81,25 @@ module Kernel
         raise EventError, "No event known by: #{event}"
       end
     end
+
     @@events[event].push(block)
-    return
+    return event
   end
 
   # Call this method when you are ready to announce that an event has happened.
   # +event+:: The event that is happening.
   # The values in the args parameter will be passed to the callback.
+  # The :event_emitted event is emitted _after_ all callbacks for a given
+  # event have been called and _only_ if a callback was called.
+  # The :event_emitted event is _not_ emitted if the :event_emitted was the
+  # event being emitted.
   def emit_event(event, *args)
+    event = event.to_s.to_sym()
+
+    return false if @@silenced_events.include?(event)
+
     has_done_callback = false
-    event = event.to_sym() if event.is_a?(String)
+
     if has_event?(event)
       @@events[event].each do |callback|
         callback.call(event, args)
@@ -89,7 +108,25 @@ module Kernel
     else
       raise EventError, "No event known by: #{event}"
     end
+
+    if has_done_callback and event != :event_emitted
+      emit_event(:event_emitted, event)
+    end
     return has_done_callback
+  end
+
+  # This will cause an event's callbacks to _not_ be called when the 
+  # event is emitted.
+  def silence_event(event)
+    event = event.to_s.to_sym()
+    @@silenced_events.push(event) unless @@silenced_events.include?(event)
+    return event
+  end
+
+  # Unsilenced an event if it has previously been silenced.
+  def unsilence_event(event)
+    event = event.to_s.to_sym()
+    return @@silenced_events.delete(event)
   end
 
 end

@@ -56,7 +56,7 @@
     </tr>
     <tr class="top-aligned-row">
       <td><strong>Last Update:</strong></td>
-      <td>Fri Feb 26 16:26:21 -0500 2010</td>
+      <td>Wed Mar 10 13:24:03 -0500 2010</td>
     </tr>
     </table>
   </div>
@@ -77,6 +77,15 @@ Qt&#8216;s signal/slot system, but should work for simple projects.
 <p>
 This has -no- threading or process management!
 </p>
+<p>
+Three events are pre-defined:
+</p>
+<pre>
+ :event_created  -- when a new event is created.
+ :event_emitted  -- when a event is emitted, but only if it
+                    is _NOT_ :event_emitted.
+ :event_removed  -- when a event is removed.
+</pre>
 <table>
 <tr><td valign="top">Author:</td><td>Randy Carnahan
 

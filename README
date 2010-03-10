@@ -33,3 +33,12 @@ Here's a simple example:
   emit_event(:laugh, "Syntruth")
     => Syntruth is laughing!
     => Somebody is laughing!
+
+  silence_event(:laugh)
+
+  emit_event(:laugh, "Syntruth")
+    => ...nada...
+
+  unsilence_event(:laugh)
+
+
