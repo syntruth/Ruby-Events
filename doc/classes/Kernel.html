@@ -112,12 +112,14 @@ Three events are pre-defined:
 
       <div class="name-list">
       <a href="#M000001">create_event</a>&nbsp;&nbsp;
-      <a href="#M000005">emit_event</a>&nbsp;&nbsp;
+      <a href="#M000006">emit_event</a>&nbsp;&nbsp;
       <a href="#M000003">has_event?</a>&nbsp;&nbsp;
       <a href="#M000004">observe_event</a>&nbsp;&nbsp;
       <a href="#M000002">remove_event</a>&nbsp;&nbsp;
-      <a href="#M000006">silence_event</a>&nbsp;&nbsp;
-      <a href="#M000007">unsilence_event</a>&nbsp;&nbsp;
+      <a href="#M000007">silence_event</a>&nbsp;&nbsp;
+      <a href="#M000009">suppress_exceptions</a>&nbsp;&nbsp;
+      <a href="#M000005">unobserve_event</a>&nbsp;&nbsp;
+      <a href="#M000008">unsilence_event</a>&nbsp;&nbsp;
       </div>
     </div>
 
@@ -164,7 +166,7 @@ raised. The :event_created event is emitted after creation.
             onclick="toggleCode('M000001-source');return false;">[Source]</a></p>
           <div class="method-source-code" id="M000001-source">
 <pre>
-<span class="ruby-comment cmt"># File events.rb, line 41</span>
+<span class="ruby-comment cmt"># File events.rb, line 45</span>
   <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">create_event</span>(<span class="ruby-identifier">event</span>)
     <span class="ruby-identifier">event</span> = <span class="ruby-identifier">event</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">to_sym</span>()
     <span class="ruby-ivar">@@events</span>[<span class="ruby-identifier">event</span>] = [] <span class="ruby-keyword kw">if</span> <span class="ruby-keyword kw">not</span> <span class="ruby-ivar">@@events</span>.<span class="ruby-identifier">has_key?</span>(<span class="ruby-identifier">event</span>)
@@ -176,11 +178,11 @@ raised. The :event_created event is emitted after creation.
         </div>
       </div>
 
-      <div id="method-M000005" class="method-detail">
-        <a name="M000005"></a>
+      <div id="method-M000006" class="method-detail">
+        <a name="M000006"></a>
 
         <div class="method-heading">
-          <a href="#M000005" class="method-signature">
+          <a href="#M000006" class="method-signature">
           <span class="method-name">emit_event</span><span class="method-args">(event, *args)</span>
           </a>
         </div>
@@ -202,10 +204,10 @@ event have been called and <em>only</em> if a callback was called. The
 event being emitted.
 </p>
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000005-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000005-source">
+            onclick="toggleCode('M000006-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000006-source">
 <pre>
-<span class="ruby-comment cmt"># File events.rb, line 96</span>
+<span class="ruby-comment cmt"># File events.rb, line 121</span>
   <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">emit_event</span>(<span class="ruby-identifier">event</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
     <span class="ruby-identifier">event</span> = <span class="ruby-identifier">event</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">to_sym</span>()
 
@@ -215,7 +217,15 @@ event being emitted.
 
     <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">has_event?</span>(<span class="ruby-identifier">event</span>)
       <span class="ruby-ivar">@@events</span>[<span class="ruby-identifier">event</span>].<span class="ruby-identifier">each</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">callback</span><span class="ruby-operator">|</span>
-        <span class="ruby-identifier">callback</span>.<span class="ruby-identifier">call</span>(<span class="ruby-identifier">event</span>, <span class="ruby-identifier">args</span>)
+        <span class="ruby-keyword kw">begin</span>
+          <span class="ruby-identifier">callback</span>.<span class="ruby-identifier">call</span>(<span class="ruby-identifier">event</span>, <span class="ruby-identifier">args</span>)
+        <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">Exception</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">err</span>
+          <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@@suppress_exceptions</span>
+            <span class="ruby-keyword kw">next</span>
+          <span class="ruby-keyword kw">else</span>
+            <span class="ruby-identifier">raise</span>
+          <span class="ruby-keyword kw">end</span>
+        <span class="ruby-keyword kw">end</span>
         <span class="ruby-identifier">has_done_callback</span> = <span class="ruby-keyword kw">true</span>
       <span class="ruby-keyword kw">end</span>
     <span class="ruby-keyword kw">else</span>
@@ -250,7 +260,7 @@ events hash.
             onclick="toggleCode('M000003-source');return false;">[Source]</a></p>
           <div class="method-source-code" id="M000003-source">
 <pre>
-<span class="ruby-comment cmt"># File events.rb, line 64</span>
+<span class="ruby-comment cmt"># File events.rb, line 68</span>
   <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">has_event?</span>(<span class="ruby-identifier">event</span>)
     <span class="ruby-identifier">event</span> = <span class="ruby-identifier">event</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">to_sym</span>()
     <span class="ruby-keyword kw">return</span> <span class="ruby-ivar">@@events</span>.<span class="ruby-identifier">has_key?</span>(<span class="ruby-identifier">event</span>)
@@ -289,11 +299,15 @@ Call this method to watch for an event to happen.
 
 </td></tr>
 </table>
+<p>
+The ID of the block is returned, which needs to be used to remove an
+observer.
+</p>
           <p><a class="source-toggle" href="#"
             onclick="toggleCode('M000004-source');return false;">[Source]</a></p>
           <div class="method-source-code" id="M000004-source">
 <pre>
-<span class="ruby-comment cmt"># File events.rb, line 74</span>
+<span class="ruby-comment cmt"># File events.rb, line 81</span>
   <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">observe_event</span>(<span class="ruby-identifier">event</span>, <span class="ruby-identifier">create_event_if_needed</span>=<span class="ruby-keyword kw">false</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
     <span class="ruby-identifier">event</span> = <span class="ruby-identifier">event</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">to_sym</span>()
 
@@ -306,7 +320,8 @@ Call this method to watch for an event to happen.
     <span class="ruby-keyword kw">end</span>
 
     <span class="ruby-ivar">@@events</span>[<span class="ruby-identifier">event</span>].<span class="ruby-identifier">push</span>(<span class="ruby-identifier">block</span>)
-    <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">event</span>
+
+    <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">block</span>.<span class="ruby-identifier">object_id</span>
   <span class="ruby-keyword kw">end</span>
 </pre>
           </div>
@@ -331,7 +346,7 @@ emitted if the removal was successful.
             onclick="toggleCode('M000002-source');return false;">[Source]</a></p>
           <div class="method-source-code" id="M000002-source">
 <pre>
-<span class="ruby-comment cmt"># File events.rb, line 51</span>
+<span class="ruby-comment cmt"># File events.rb, line 55</span>
   <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">remove_event</span>(<span class="ruby-identifier">event</span>)
     <span class="ruby-identifier">event</span> = <span class="ruby-identifier">event</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">to_sym</span>()
 
@@ -347,28 +362,35 @@ emitted if the removal was successful.
         </div>
       </div>
 
-      <div id="method-M000006" class="method-detail">
-        <a name="M000006"></a>
+      <div id="method-M000007" class="method-detail">
+        <a name="M000007"></a>
 
         <div class="method-heading">
-          <a href="#M000006" class="method-signature">
-          <span class="method-name">silence_event</span><span class="method-args">(event)</span>
+          <a href="#M000007" class="method-signature">
+          <span class="method-name">silence_event</span><span class="method-args">(event) {|| ...}</span>
           </a>
         </div>
       
         <div class="method-description">
           <p>
 This will cause an event&#8216;s callbacks to <em>not</em> be called when
-the event is emitted.
+the event is emitted. If called with a block, then the event will be
+silenced until the block is finished.
 </p>
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000006-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000006-source">
+            onclick="toggleCode('M000007-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000007-source">
 <pre>
-<span class="ruby-comment cmt"># File events.rb, line 120</span>
+<span class="ruby-comment cmt"># File events.rb, line 155</span>
   <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">silence_event</span>(<span class="ruby-identifier">event</span>)
     <span class="ruby-identifier">event</span> = <span class="ruby-identifier">event</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">to_sym</span>()
     <span class="ruby-ivar">@@silenced_events</span>.<span class="ruby-identifier">push</span>(<span class="ruby-identifier">event</span>) <span class="ruby-keyword kw">unless</span> <span class="ruby-ivar">@@silenced_events</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">event</span>)
+
+    <span class="ruby-keyword kw">if</span> <span class="ruby-identifier">block_given?</span>
+      <span class="ruby-keyword kw">yield</span>
+      <span class="ruby-identifier">unsilence_event</span>(<span class="ruby-identifier">event</span>)
+    <span class="ruby-keyword kw">end</span>
+
     <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">event</span>
   <span class="ruby-keyword kw">end</span>
 </pre>
@@ -376,11 +398,85 @@ the event is emitted.
         </div>
       </div>
 
-      <div id="method-M000007" class="method-detail">
-        <a name="M000007"></a>
+      <div id="method-M000009" class="method-detail">
+        <a name="M000009"></a>
 
         <div class="method-heading">
-          <a href="#M000007" class="method-signature">
+          <a href="#M000009" class="method-signature">
+          <span class="method-name">suppress_exceptions</span><span class="method-args">(set=true)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+This sets to suppression of exceptions for event handlers. If set is true,
+then exceptions from handlers are quietly ignored and any following
+handlers are called, otherwise the exception is raised.
+</p>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000009-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000009-source">
+<pre>
+<span class="ruby-comment cmt"># File events.rb, line 177</span>
+  <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">suppress_exceptions</span>(<span class="ruby-identifier">set</span>=<span class="ruby-keyword kw">true</span>)
+    <span class="ruby-ivar">@@suppress_exceptions</span> = (<span class="ruby-identifier">set</span> <span class="ruby-value">? </span><span class="ruby-keyword kw">true</span> <span class="ruby-operator">:</span> <span class="ruby-keyword kw">false</span>)
+  <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000005" class="method-detail">
+        <a name="M000005"></a>
+
+        <div class="method-heading">
+          <a href="#M000005" class="method-signature">
+          <span class="method-name">unobserve_event</span><span class="method-args">(event, handler_id)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+This will remove an event handler from an observed event.
+</p>
+<table>
+<tr><td valign="top"><tt>event</tt>:</td><td>The event to remove the handler from.
+
+</td></tr>
+<tr><td valign="top"><tt>handler_id</tt>:</td><td>This is the handler id of the block that was
+
+</td></tr>
+</table>
+<pre>
+  returned from observe_event() -- if you didn't save the value
+  you won't be able to remove the observer!
+</pre>
+          <p><a class="source-toggle" href="#"
+            onclick="toggleCode('M000005-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000005-source">
+<pre>
+<span class="ruby-comment cmt"># File events.rb, line 102</span>
+  <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">unobserve_event</span>(<span class="ruby-identifier">event</span>, <span class="ruby-identifier">handler_id</span>)
+    <span class="ruby-identifier">event</span> = <span class="ruby-identifier">event</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">to_sym</span>()
+
+    <span class="ruby-keyword kw">if</span> <span class="ruby-ivar">@@events</span>.<span class="ruby-identifier">has_key?</span>(<span class="ruby-identifier">event</span>)
+      <span class="ruby-ivar">@@events</span>.<span class="ruby-identifier">delete_if</span> <span class="ruby-keyword kw">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">handler</span><span class="ruby-operator">|</span> 
+        <span class="ruby-identifier">handler</span>.<span class="ruby-identifier">object_id</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">handler_id</span>
+      <span class="ruby-keyword kw">end</span>
+    <span class="ruby-keyword kw">end</span>
+
+    <span class="ruby-keyword kw">return</span> <span class="ruby-identifier">event</span>
+  <span class="ruby-keyword kw">end</span>
+</pre>
+          </div>
+        </div>
+      </div>
+
+      <div id="method-M000008" class="method-detail">
+        <a name="M000008"></a>
+
+        <div class="method-heading">
+          <a href="#M000008" class="method-signature">
           <span class="method-name">unsilence_event</span><span class="method-args">(event)</span>
           </a>
         </div>
@@ -390,10 +486,10 @@ the event is emitted.
 Unsilenced an event if it has previously been silenced.
 </p>
           <p><a class="source-toggle" href="#"
-            onclick="toggleCode('M000007-source');return false;">[Source]</a></p>
-          <div class="method-source-code" id="M000007-source">
+            onclick="toggleCode('M000008-source');return false;">[Source]</a></p>
+          <div class="method-source-code" id="M000008-source">
 <pre>
-<span class="ruby-comment cmt"># File events.rb, line 127</span>
+<span class="ruby-comment cmt"># File events.rb, line 168</span>
   <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">unsilence_event</span>(<span class="ruby-identifier">event</span>)
     <span class="ruby-identifier">event</span> = <span class="ruby-identifier">event</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">to_sym</span>()
     <span class="ruby-keyword kw">return</span> <span class="ruby-ivar">@@silenced_events</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-identifier">event</span>)
