@@ -30,6 +30,10 @@ module Kernel
   # if they have been silencted.
   @@silenced_events = []
 
+  # If this is set to true, and an event handler has an error,
+  # it is quietly ignored and the next handler is called.
+  @@supress_exceptions = false
+
   # EventError Exception to handle all event related errors.
   class EventError < StandardError
   end
@@ -102,7 +106,15 @@ module Kernel
 
     if has_event?(event)
       @@events[event].each do |callback|
-        callback.call(event, args)
+        begin
+          callback.call(event, args)
+        rescue Exception => err
+          if @@suppress_exceptions
+            next
+          else
+            raise
+          end
+        end
         has_done_callback = true
       end
     else
@@ -127,6 +139,14 @@ module Kernel
   def unsilence_event(event)
     event = event.to_s.to_sym()
     return @@silenced_events.delete(event)
+  end
+
+  # This sets to suppression of exceptions for event handlers. If
+  # set is true, then exceptions from handlers are quietly ignored
+  # and any following handlers are called, otherwise the exception
+  # is raised.
+  def suppress_exceptions(set=true)
+    @@suppress_exceptions = (set ? true : false)
   end
 
 end
