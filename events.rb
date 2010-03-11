@@ -3,14 +3,29 @@
 # way, to Ruby. This is not nearly as cool as Qt's signal/slot 
 # system, but should work for simple projects.
 #
-# This has -no- threading or process management!
-#
 # Three events are pre-defined:
 #
 #  :event_created  -- when a new event is created.
 #  :event_emitted  -- when a event is emitted, but only if it
 #                     is _NOT_ :event_emitted.
 #  :event_removed  -- when a event is removed.
+# 
+# Event handler callbacks are by default not threaded; they are
+# called in sequential order they were observed in, with the next
+# one being called after the prior one finishes. If you wish to 
+# use threading, call:
+# 
+#   set_threaded_events(true)
+# 
+# Afterwards, all handler callbacks will be wrapped in Thread
+# objects and joined immediately.
+# 
+# To find out if events are being threaded, you can call:
+# 
+#   are_events_threaded?
+# 
+# ...which will return true if threads are being used.
+# 
 #
 # Author:: Randy Carnahan
 # Copyright:: Copyright (c) 2009 Randy Carnahan
@@ -25,6 +40,10 @@ module Kernel
     :event_emitted => [],
     :event_removed => []
   }
+
+  # If this is true, then event callbacks will be ran
+  # in threads.
+  @@threaded_events = false
 
   # Holds our silenced events. Events in this array are not emitted
   # if they have been silencted.
@@ -68,6 +87,12 @@ module Kernel
   def has_event?(event)
     event = event.to_s.to_sym()
     return @@events.has_key?(event)
+  end
+
+  # This will return true if event callbacks are handled
+  # via threads, otherwise false.
+  def are_events_threaded?
+    return @@threaded_events
   end
 
   # Call this method to watch for an event to happen.
@@ -128,7 +153,11 @@ module Kernel
     if has_event?(event)
       @@events[event].each do |callback|
         begin
-          callback.call(event, args)
+          if @@threaded_events
+            Thread.new { callback.call(event, args) }.join()
+          else
+            callback.call(event, args)
+          end
         rescue Exception => err
           if @@suppress_exceptions
             next
@@ -146,6 +175,12 @@ module Kernel
       emit_event(:event_emitted, event)
     end
     return has_done_callback
+  end
+
+  # Calling this with a true value will cause all event callbacks
+  # to be wrapped in their own threads.
+  def set_threaded_events(bool=true)
+    @@threaded_events = (bool ? true : false)
   end
 
   # This will cause an event's callbacks to _not_ be called when the 
@@ -171,11 +206,11 @@ module Kernel
   end
 
   # This sets to suppression of exceptions for event handlers. If
-  # set is true, then exceptions from handlers are quietly ignored
-  # and any following handlers are called, otherwise the exception
-  # is raised.
-  def suppress_exceptions(set=true)
-    @@suppress_exceptions = (set ? true : false)
+  # bool is set is true, then exceptions from handlers are quietly
+  # ignored and any following handlers are called, otherwise the 
+  # exception is raised.
+  def suppress_exceptions(bool=true)
+    @@suppress_exceptions = (bool ? true : false)
   end
 
 end

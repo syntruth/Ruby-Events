@@ -1,9 +1,8 @@
 
 This is a very simplistic events callback library in Ruby. Simplistic in the
-fact that it does no threading or any sort of process management; it's meant
-more for very simple projects that can benefit from an event observation
-model.  I've mostly used it in an IRC bot that's in the process of being 
-written.
+fact that it's meant more for very simple projects that can benefit from an 
+event observation model. By default, it does not handle events in Threads,
+though threads can be turned on with the set_threaded_events() method.
 
 This is a stand-alone lib, with no requirements.  Full docs are in docs/
 of course.
@@ -18,6 +17,12 @@ Here's a simple example:
     => false
   has_event?(:laugh)
     => true
+
+  are_events_threaded?
+    => false
+
+  # All handler callbacks are now handed in threads.
+  set_threaded_events(true)
 
   hid1 = observe_event(:laugh) do |event, args|
     puts "%s is laughing!" % who.first()
